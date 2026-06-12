@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pension Overboard — coming soon</title>
+<style>
+  :root {
+    --ink: #f4e4b4;
+    --ink-dim: #b79a6a;
+    --paper: #0a1420;
+    --parchment: #ecd9a8;
+    --parchment-dk: #c6ad78;
+    --accent: #d8402a;
+    --accent-gold: #ffd66a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Courier New", ui-monospace, monospace;
+    overflow: hidden;
+  }
+  body {
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(ellipse at 50% 30%, #142a3d 0%, #060c14 80%);
+  }
+  #stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    max-width: 1600px;
+    max-height: 900px;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    -ms-interpolation-mode: nearest-neighbor;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+    background: #1a4560;
+  }
+  .hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    padding: 2.2vmin 2.8vmin;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2vmin;
+  }
+  .title {
+    font-size: clamp(18px, 2.6vmin, 36px);
+    letter-spacing: 0.08em;
+    text-shadow: 2px 2px 0 #000, 0 0 8px rgba(0,0,0,0.8);
+  }
+  .title b {
+    color: var(--accent-gold);
+    font-weight: normal;
+  }
+  .title small {
+    display: block;
+    font-size: 0.55em;
+    color: var(--ink-dim);
+    letter-spacing: 0.18em;
+    margin-top: 0.2em;
+  }
+  .charted {
+    font-size: clamp(11px, 1.6vmin, 18px);
+    color: var(--ink-dim);
+    text-shadow: 1px 1px 0 #000;
+    letter-spacing: 0.1em;
+    text-align: right;
+  }
+  .charted b {
+    color: var(--accent-gold);
+  }
+  .bottombar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2vmin;
+  }
+  .hint {
+    font-size: clamp(11px, 1.4vmin, 16px);
+    color: var(--ink-dim);
+    text-shadow: 1px 1px 0 #000;
+    line-height: 1.7;
+  }
+  .hint kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0.05em 0.4em;
+    margin: 0 0.1em;
+    background: rgba(244,228,180,0.12);
+    border: 1px solid rgba(244,228,180,0.3);
+    border-radius: 3px;
+    color: var(--ink);
+    font-family: inherit;
+    text-shadow: none;
+  }
+  .footer {
+    font-size: clamp(9px, 1.1vmin, 13px);
+    color: var(--ink-dim);
+    opacity: 0.6;
+    text-align: right;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  /* Proximity label floating over the world */
+  .proximity {
+    position: absolute;
+    left: 50%;
+    top: 68%;
+    transform: translate(-50%, 0);
+    padding: 0.6em 1.1em;
+    background: rgba(10,20,32,0.82);
+    border: 1px solid rgba(244,228,180,0.4);
+    color: var(--ink);
+    font-size: clamp(12px, 1.8vmin, 20px);
+    letter-spacing: 0.08em;
+    text-shadow: 1px 1px 0 #000;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.18s;
+    pointer-events: none;
+  }
+  .proximity.on { opacity: 1; }
+  .proximity kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0.05em 0.5em;
+    margin-right: 0.5em;
+    background: var(--accent-gold);
+    border: 1px solid #8a6820;
+    border-radius: 3px;
+    color: #2a1a00;
+    font-family: inherit;
+    text-shadow: none;
+    font-weight: bold;
+  }
+
+  /* Panel (reading a "page") */
+  .scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(6,12,20,0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .scrim.on {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .panel {
+    position: absolute;
+    top: 50%;
+    right: 4vmin;
+    transform: translate(30%, -50%);
+    width: min(540px, 48vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 3vmin 3.4vmin;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.04) 100%),
+      repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,0.02) 3px 4px),
+      var(--parchment);
+    color: #2a1c0a;
+    border: 2px solid #4a2d10;
+    box-shadow:
+      0 0 0 4px var(--parchment-dk),
+      0 0 0 6px #4a2d10,
+      0 18px 40px rgba(0,0,0,0.6);
+    font-family: "Georgia", "Palatino", serif;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s, transform 0.28s;
+  }
+  .scrim.on .panel {
+    opacity: 1;
+    transform: translate(0, -50%);
+    pointer-events: auto;
+  }
+  .panel h2 {
+    font-family: "Courier New", monospace;
+    font-size: clamp(18px, 2.6vmin, 30px);
+    letter-spacing: 0.12em;
+    margin-bottom: 0.6em;
+    color: #6a1a0a;
+    border-bottom: 1px dashed #6a4a20;
+    padding-bottom: 0.4em;
+  }
+  .panel h3 {
+    font-family: "Courier New", monospace;
+    font-size: clamp(13px, 1.7vmin, 17px);
+    letter-spacing: 0.08em;
+    margin: 1em 0 0.3em;
+    color: #4a2d10;
+  }
+  .panel p {
+    font-size: clamp(13px, 1.6vmin, 17px);
+    line-height: 1.7;
+    margin-bottom: 0.9em;
+  }
+  .panel ul, .panel ol {
+    font-size: clamp(13px, 1.6vmin, 17px);
+    line-height: 1.7;
+    margin: 0.4em 0 0.9em 1.4em;
+  }
+  .panel em { color: #6a1a0a; font-style: italic; }
+  .panel .soft { color: #6a4a20; font-style: italic; }
+  .panel .ctarow {
+    display: flex;
+    gap: 0.6em;
+    flex-wrap: wrap;
+    margin-top: 1em;
+  }
+  .panel .cta {
+    display: inline-block;
+    padding: 0.5em 1em;
+    background: #6a1a0a;
+    color: var(--parchment);
+    font-family: "Courier New", monospace;
+    font-size: clamp(12px, 1.5vmin, 15px);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    border: 1px solid #2a0a00;
+    cursor: default;
+    opacity: 0.7;
+  }
+  .panel .cta.ghost {
+    background: transparent;
+    color: #6a1a0a;
+    border-color: #6a1a0a;
+  }
+  .panel .close-hint {
+    position: absolute;
+    top: 1em;
+    right: 1.2em;
+    font-family: "Courier New", monospace;
+    font-size: clamp(10px, 1.3vmin, 13px);
+    color: #6a4a20;
+    letter-spacing: 0.1em;
+  }
+  .panel .close-hint kbd {
+    background: #4a2d10;
+    color: var(--parchment);
+    padding: 0.1em 0.4em;
+    border-radius: 2px;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="480" height="270"></canvas>
+  <div class="hud">
+    <div class="topbar">
+      <div class="title">
+        <b>Pension Overboard</b>
+        <small>one day from retirement</small>
+      </div>
+      <div class="charted">
+        charted <b id="charted-n">0</b>/<span id="charted-total">6</span> buoys
+      </div>
+    </div>
+    <div class="bottombar">
+      <div class="hint">
+        <kbd>W</kbd> sail &nbsp; <kbd>A</kbd><kbd>D</kbd> steer &nbsp; <kbd>S</kbd> slow &nbsp; <kbd>Space</kbd> cannon &nbsp; <kbd>E</kbd> read buoy
+      </div>
+      <div class="footer">© Pension Overboard — proof of concept</div>
+    </div>
+  </div>
+  <div class="proximity" id="prox"><kbd>E</kbd><span id="prox-name">Home Harbor</span></div>
+  <div class="scrim" id="scrim">
+    <article class="panel" id="panel">
+      <div class="close-hint"><kbd>E</kbd> / <kbd>Esc</kbd> to close</div>
+      <div id="panel-body"></div>
+    </article>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const cvs  = document.getElementById("game");
+  const ctx  = cvs.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  const W = cvs.width, H = cvs.height;
+
+  // ---------- World ----------
+  const WORLD = { w: 1600, h: 1200 };
+  const islands = [
+    { x:  220, y:  240, r: 150, seed: 11 },
+    { x: 1280, y:  300, r: 180, seed: 23 },
+    { x:  380, y:  980, r: 130, seed: 47 },
+    { x: 1200, y:  920, r: 200, seed: 91 },
+    { x:  820, y:  620, r:  90, seed: 133 },
+  ];
+
+  function hash(x, y) {
+    let h = (x | 0) * 374761393 + (y | 0) * 668265263;
+    h = (h ^ (h >> 13)) * 1274126177;
+    return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+  }
+  function noise2(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const a = hash(xi, yi), b = hash(xi+1, yi);
+    const c = hash(xi, yi+1), d = hash(xi+1, yi+1);
+    const u = xf*xf*(3-2*xf), v = yf*yf*(3-2*yf);
+    return (a*(1-u)+b*u)*(1-v) + (c*(1-u)+d*u)*v;
+  }
+  function fbm(x, y) {
+    let v = 0, a = 0.5, f = 1;
+    for (let i = 0; i < 4; i++) { v += noise2(x*f, y*f) * a; f *= 2; a *= 0.5; }
+    return v;
+  }
+  function islandField(x, y) {
+    let best = Infinity;
+    for (const is of islands) {
+      const dx = x - is.x, dy = y - is.y;
+      const d  = Math.hypot(dx, dy);
+      const ang = Math.atan2(dy, dx);
+      const wiggle =
+          Math.sin(ang * 3 + is.seed) * 14 +
+          Math.sin(ang * 7 + is.seed * 1.7) * 7 +
+          fbm(dx * 0.012 + is.seed, dy * 0.012) * 40 - 20;
+      const surface = is.r + wiggle;
+      const signed = d - surface;
+      if (signed < best) best = signed;
+    }
+    return best;
+  }
+
+  // ---------- Stations (navigable "pages") ----------
+  const STATIONS = [
+    { id:"home",       x: 820, y: 800,  name:"Home Harbor",            kind:"buoy",   color:"#ffd66a" },
+    { id:"captain",    x: 220, y: 470,  name:"Captain's Rest",         kind:"sign",   color:"#d8a060" },
+    { id:"branch",     x: 820, y: 440,  name:"The Branch Office",      kind:"tower",  color:"#6a1a0a" },
+    { id:"armoury",    x: 530, y: 820,  name:"The Armoury",            kind:"crate",  color:"#b86030" },
+    { id:"dimensions", x:1040, y: 500,  name:"Dimensional Archipelago",kind:"sign",   color:"#8040a0" },
+    { id:"wishlist",   x: 950, y:1080,  name:"Wishlist Wharf",         kind:"flag",   color:"#40a060" },
+    { id:"spyglass",   x:1450, y: 650,  name:"Spyglass Point",         kind:"sign",   color:"#d8402a" },
+  ];
+
+  const CONTENT = {
+    home: `
+      <h2>PENSION OVERBOARD</h2>
+      <p>One day from retirement. A cosmic pension frozen by corporate skullduggery. Eleven dimensional branch offices, eleven surly regional managers, eleven signed tokens to collect before you can open your rum bar.</p>
+      <p>A top-down pirate action game — spiritual successor to <em>Overboard!</em> (PS1, 1997). Built in Godot.</p>
+      <p class="soft">Sail the coast. Find the six buoys. Each one tells you a piece of the pitch.</p>
+      <h3>CONTROLS</h3>
+      <ul>
+        <li><b>W</b> sail forward · <b>A/D</b> steer · <b>S</b> slow</li>
+        <li><b>Space</b> fire forward cannon</li>
+        <li><b>E</b> read the buoy you're next to · <b>Esc</b> close</li>
+      </ul>
+    `,
+    captain: `
+      <h2>THE CAPTAIN</h2>
+      <p>Gruff. Genre-savvy. <em>"One day from retirement"</em> — for the entire game. Every cutscene opens with <em>"after this one, I'm done,"</em> and he knows it's a cursed thing to say in an action story. The NPCs know it too. Nobody lets him live it down.</p>
+      <p>Grumpy, bureaucratically exhausted, not heroic. Motivation is entirely self-interested: get the money, retire, open a small rum bar. Everything else is in the way.</p>
+      <p>Takes everything cosmic-horror-adjacent personally. Will argue with an Elder Thing about his pizza order before fighting it.</p>
+    `,
+    branch: `
+      <h2>THE DIMENSIONALIST</h2>
+      <p class="soft">CEO, Cosmic Bank. Antagonist.</p>
+      <p>Never raises his voice. Speaks exclusively in corporate euphemism — <em>"we're going to need to loop back on that"</em>, <em>"that's not really in scope for this meeting."</em></p>
+      <p>Has been skimming pirate pensions for millennia. When an audit came due, he distributed the assets across eleven dimensional branch offices to dodge it. You're here to collect.</p>
+      <p>Appears in person only at Head Office. Until then, his name is on every form, every employee-of-the-century plaque, every poster you sail past.</p>
+    `,
+    armoury: `
+      <h2>THE ARSENAL</h2>
+      <p>Broadside cannons. Chain shot. Forward cannon (the one you're pressing Space for right now).</p>
+      <h3>SIDEARMS</h3>
+      <ul>
+        <li><b>Flamethrower</b> — cone of fire, limited fuel, ignites oil slicks.</li>
+        <li><b>Mines</b> — drop behind, detonate on contact.</li>
+        <li><b>Fire Barrels</b> — leave a 5-second burning patch of water.</li>
+        <li><b>Tesla Coil</b> — toggle-on proximity arc, chains between enemies.</li>
+        <li><b>Rimefang</b> — frost-forged spear. Freezes on first hit, <em>shatters</em> on the second.</li>
+      </ul>
+      <h3>INVOCATIONS</h3>
+      <ul>
+        <li><b>Kraken's Blessing</b> — summon a god, briefly. Tentacles, ink, homing purple cannonballs.</li>
+      </ul>
+      <p class="soft">Plus eleven dimension-locked artifacts — one per branch office. Take them off the manager.</p>
+    `,
+    dimensions: `
+      <h2>ELEVEN BRANCH OFFICES</h2>
+      <p>Each dimension has its own water colour, its own hazards, its own weapon, and a regional manager with unreasonable KPIs who really doesn't want to countersign your pension token.</p>
+      <ol>
+        <li>Caribbean <span class="soft">— tutorial isles, corrupt harbourmasters</span></li>
+        <li>Haunted <span class="soft">— ghost fleet, spectral fog</span></li>
+        <li>Arctic <span class="soft">— Ice Dragon, Rimefang forged here</span></li>
+        <li>KrakenCon <span class="soft">— Cthulhu, who thinks you're the pizza guy</span></li>
+        <li>Edo Japan <span class="soft">— Ryujin, sea-dragon kami</span></li>
+        <li>Volcanic <span class="soft">— magma shot, lava tides</span></li>
+        <li>Cyberpunk <span class="soft">— neon flotilla, oil-slick traps</span></li>
+        <li>Aztec <span class="soft">— scarab swarms, poison darts</span></li>
+        <li>Prehistoric <span class="soft">— primordial beasts</span></li>
+        <li>Egyptian <span class="soft">— sand-galley dynasty</span></li>
+        <li>Cosmic Void <span class="soft">— Head Office. The Dimensionalist. Retirement.</span></li>
+      </ol>
+    `,
+    spyglass: `
+      <h2>FIELD FOOTAGE</h2>
+      <p class="soft">Captured from the real build — Godot 4.6, running live.</p>
+      <video controls muted loop playsinline preload="metadata" poster="media/poster.jpg"
+             style="width:100%; border:2px solid #4a2d10; background:#000; display:block; margin:0.6em 0 0.9em;">
+        <source src="media/gameplay.mp4" type="video/mp4">
+      </video>
+      <p>This is the <em>diegetic main menu</em> — no mock-up, no flat splash screen. The procedural
+      Gerstner waves, GPU particles and full scene systems are all running live behind the title,
+      the same machinery the game itself sails on.</p>
+    `,
+    wishlist: `
+      <h2>COMING SOON</h2>
+      <p>We'll update this buoy when there's something to click.</p>
+      <div class="ctarow">
+        <a class="cta">Wishlist on Steam</a>
+        <a class="cta ghost">Devlog</a>
+        <a class="cta ghost">Press Kit</a>
+      </div>
+      <p class="soft" style="margin-top:1.2em">Links are intentionally inactive — this is a proof of concept. The game is mid-production in Godot 4.6.</p>
+      <h3>FOLLOW</h3>
+      <p>Until the channels are live, the best way to see progress is the project's <em>SPEC.md</em> — a living document ticked off as features land.</p>
+    `,
+  };
+
+  const visited = new Set();
+  const chartedEl = document.getElementById("charted-n");
+  document.getElementById("charted-total").textContent = STATIONS.length;
+
+  // ---------- Floating target barrels (cannon feedback) ----------
+  const BARREL_POSITIONS = [
+    { x: 680, y: 500 }, { x: 980, y: 760 },
+    { x: 600, y: 720 }, { x: 1020, y: 560 },
+    { x: 900, y: 980 }, { x: 720, y:1020 },
+  ];
+  const barrels = BARREL_POSITIONS.map(p => ({
+    x: p.x, y: p.y, baseX: p.x, baseY: p.y,
+    alive: true, respawnAt: 0, wobble: Math.random() * 6.28,
+  }));
+
+  // ---------- Projectiles + particles ----------
+  const cannonballs = [];  // {x,y,vx,vy,life}
+  const particles   = [];  // {x,y,vx,vy,life,color,size}
+  let cannonCooldown = 0;
+
+  function fireCannon() {
+    if (cannonCooldown > 0) return;
+    cannonCooldown = 0.45;
+    const hx = Math.cos(ship.heading), hy = Math.sin(ship.heading);
+    const bx = ship.x + hx * 11;
+    const by = ship.y + hy * 11;
+    cannonballs.push({
+      x: bx, y: by,
+      vx: hx * 220 + ship.speed * hx * 0.3,
+      vy: hy * 220 + ship.speed * hy * 0.3,
+      life: 1.4,
+    });
+    // muzzle flash
+    for (let i = 0; i < 6; i++) {
+      const a = ship.heading + (Math.random() - 0.5) * 0.6;
+      const s = 30 + Math.random() * 60;
+      particles.push({
+        x: bx, y: by,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.22 + Math.random() * 0.1,
+        color: i < 2 ? "#ffffff" : (i < 4 ? "#ffd066" : "#b06020"),
+        size: 1 + Math.floor(Math.random() * 2),
+      });
+    }
+    // recoil
+    ship.speed -= 6;
+  }
+
+  function explodeBarrel(b) {
+    b.alive = false;
+    b.respawnAt = 4 + Math.random() * 3;
+    // orange sparks
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 30 + Math.random() * 100;
+      particles.push({
+        x: b.x, y: b.y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.4 + Math.random() * 0.6,
+        color: Math.random() < 0.3 ? "#ffffff" : (Math.random() < 0.5 ? "#ffb040" : "#e04020"),
+        size: 1 + Math.floor(Math.random() * 2),
+      });
+    }
+    // wood chips
+    for (let i = 0; i < 10; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 20 + Math.random() * 60;
+      particles.push({
+        x: b.x, y: b.y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.7 + Math.random() * 0.5,
+        color: "#6a3418",
+        size: 1 + Math.floor(Math.random() * 2),
+      });
+    }
+  }
+
+  function splashAt(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI + Math.random() * Math.PI; // mostly upward
+      const s = 20 + Math.random() * 50;
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20,
+        life: 0.3 + Math.random() * 0.3,
+        color: "#d8f0f0",
+        size: 1,
+      });
+    }
+  }
+
+  // ---------- Background bake ----------
+  const bg = document.createElement("canvas");
+  bg.width = WORLD.w; bg.height = WORLD.h;
+  const bgx = bg.getContext("2d");
+
+  function bakeWorld() {
+    bgx.fillStyle = "#123a52";
+    bgx.fillRect(0, 0, WORLD.w, WORLD.h);
+
+    const img = bgx.getImageData(0, 0, WORLD.w, WORLD.h);
+    const d = img.data;
+    for (let y = 0; y < WORLD.h; y += 2) {
+      for (let x = 0; x < WORLD.w; x += 2) {
+        const f = islandField(x, y);
+        let r, g, b;
+        if (f > 140) {
+          const n = fbm(x * 0.02, y * 0.02);
+          r = 0x12 + n*12|0; g = 0x3a + n*16|0; b = 0x52 + n*18|0;
+        } else if (f > 40) {
+          const t = (140 - f) / 100;
+          r = 0x12 + t*10|0; g = 0x3a + t*30|0; b = 0x52 + t*22|0;
+        } else if (f > 0) {
+          const t = (40 - f) / 40;
+          r = 0x1a + t*28|0; g = 0x58 + t*58|0; b = 0x78 + t*28|0;
+        } else if (f > -6) {
+          r = 0xa8; g = 0xd8; b = 0xd8;
+        } else if (f > -14) {
+          r = 0xb8; g = 0x93; b = 0x5a;
+        } else if (f > -40) {
+          const n = fbm(x * 0.08, y * 0.08);
+          r = 0xe6 - n*14|0; g = 0xc8 - n*12|0; b = 0x88 - n*14|0;
+        } else {
+          const n = fbm(x * 0.03, y * 0.03);
+          if (n < 0.4) { r = 0x2f; g = 0x5f; b = 0x24; }
+          else         { r = 0x4a; g = 0x88; b = 0x38; }
+        }
+        for (let py = 0; py < 2; py++) {
+          for (let px = 0; px < 2; px++) {
+            const i = ((y+py) * WORLD.w + (x+px)) * 4;
+            d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = 255;
+          }
+        }
+      }
+    }
+    bgx.putImageData(img, 0, 0);
+
+    // Trees
+    let tries = 0, placed = 0;
+    while (placed < 360 && tries < 4500) {
+      tries++;
+      const x = Math.random() * WORLD.w;
+      const y = Math.random() * WORLD.h;
+      const f = islandField(x, y);
+      if (f > -48) continue;
+      bgx.fillStyle = "rgba(0,0,0,0.35)";
+      bgx.fillRect(x|0, (y+2)|0, 7, 4);
+      bgx.fillStyle = "#1c4214";
+      bgx.fillRect((x-1)|0, (y-3)|0, 9, 7);
+      bgx.fillStyle = "#6ea84a";
+      bgx.fillRect((x+1)|0, (y-2)|0, 3, 2);
+      placed++;
+    }
+
+    // Town on BR island + branch-office tower on centre island
+    drawTown(bgx, 1240, 980);
+    drawTower(bgx, 820, 620);
+  }
+
+  function drawTown(g, cx, cy) {
+    const buildings = [
+      [-40, -30, 22, 18], [-12, -28, 18, 16], [ 12, -34, 20, 20],
+      [-44,  -2, 18, 16], [-18,   0, 16, 14], [  6,  -4, 22, 18], [ 32,  -2, 16, 14],
+      [-30,  22, 20, 16], [  0,  22, 22, 18], [ 28,  22, 16, 14],
+    ];
+    for (const [dx, dy, w, h] of buildings) {
+      const x = cx + dx, y = cy + dy;
+      g.fillStyle = "#d8c090"; g.fillRect(x, y, w, h);
+      g.fillStyle = "#a04028"; g.fillRect(x - 1, y - 3, w + 2, 5);
+      g.fillStyle = "rgba(0,0,0,0.25)"; g.fillRect(x, y + h - 1, w, 1);
+      g.fillStyle = "#2d1a10"; g.fillRect(x + (w>>1) - 1, y + 6, 2, 3);
+    }
+    // dock planks south of town (visible, ties to Wishlist Wharf station)
+    g.fillStyle = "#6a4a2a"; g.fillRect(cx - 46, cy + 40, 40, 6);
+    g.fillStyle = "#4a3018";
+    for (let i = 0; i < 8; i++) g.fillRect(cx - 46 + i * 5, cy + 40, 1, 6);
+  }
+
+  function drawTower(g, cx, cy) {
+    // Branch-office tower: gloomy stone with red pennant (baked into world).
+    g.fillStyle = "rgba(0,0,0,0.5)"; g.fillRect(cx - 10, cy - 2, 20, 14);
+    g.fillStyle = "#5a5044"; g.fillRect(cx - 10, cy - 24, 20, 28);
+    g.fillStyle = "#403830";
+    for (let y = cy - 22; y < cy + 4; y += 4) g.fillRect(cx - 10, y, 20, 1);
+    g.fillStyle = "#2a2018"; g.fillRect(cx - 4, cy - 14, 8, 8); // window
+    g.fillStyle = "#8a7a60"; g.fillRect(cx - 11, cy - 28, 22, 4); // battlements
+    g.fillStyle = "#5a5044";
+    for (let x = cx - 11; x <= cx + 7; x += 4) g.fillRect(x, cy - 30, 2, 2);
+    // flagpole + pennant
+    g.fillStyle = "#2a2018"; g.fillRect(cx, cy - 40, 1, 14);
+    g.fillStyle = "#6a1a0a"; g.fillRect(cx + 1, cy - 40, 5, 3);
+  }
+
+  // ---------- Ship sprite ----------
+  const SHIP_SIZE = 28;
+  const SHIP_ROT_FRAMES = 64;
+  const shipFrames = [];
+
+  function drawShipUp(g) {
+    const cx = SHIP_SIZE / 2, cy = SHIP_SIZE / 2;
+    const hullPts = [];
+    for (let y = -11; y <= 11; y++) {
+      let hw;
+      if (y < -8)       hw = 2 + (11 + y) * 0.6;
+      else if (y > 8)   hw = 4.5 - (y - 8) * 0.8;
+      else              hw = 4.5 + Math.sin((y + 8) / 16 * Math.PI) * 0.8;
+      hullPts.push([y, Math.max(0, Math.round(hw))]);
+    }
+    g.fillStyle = "rgba(0,0,0,0.35)";
+    for (const [y, hw] of hullPts) g.fillRect((cx - hw)|0, (cy + y + 1)|0, hw * 2, 1);
+    g.fillStyle = "#6a3418";
+    for (const [y, hw] of hullPts) g.fillRect((cx - hw)|0, (cy + y)|0, hw * 2, 1);
+    g.fillStyle = "#b82a1a";
+    for (const [y, hw] of hullPts) {
+      if (y > -9 && y < 9 && hw >= 3) {
+        g.fillRect((cx - hw)|0, (cy + y)|0, 1, 1);
+        g.fillRect((cx + hw - 1)|0, (cy + y)|0, 1, 1);
+      }
+    }
+    g.fillStyle = "#8a5a2a";
+    for (const [y, hw] of hullPts) {
+      if (hw >= 3) g.fillRect((cx - hw + 1)|0, (cy + y)|0, hw * 2 - 2, 1);
+    }
+    // cannon on bow (visible muzzle from top-down)
+    g.fillStyle = "#1a1a1a"; g.fillRect(cx, cy - 10, 1, 3);
+    // mainsail
+    g.fillStyle = "#d8c8a0"; g.fillRect(cx - 5, cy - 6, 10, 10);
+    g.fillStyle = "#f0e0b8"; g.fillRect(cx - 4, cy - 6, 8, 3);
+    g.fillStyle = "#a89878"; g.fillRect(cx - 5, cy + 3, 10, 1);
+    g.fillStyle = "#3a2410"; g.fillRect(cx, cy - 7, 1, 13);
+    g.fillRect(cx - 5, cy - 6, 10, 1);
+    // foresail
+    g.fillStyle = "#e8d8b0"; g.fillRect(cx - 2, cy - 9, 5, 4);
+    g.fillStyle = "#3a2410"; g.fillRect(cx - 2, cy - 9, 5, 1);
+    // pennant
+    g.fillStyle = "#d8402a"; g.fillRect(cx + 1, cy - 9, 3, 1);
+  }
+
+  function bakeShip() {
+    const base = document.createElement("canvas");
+    base.width = SHIP_SIZE; base.height = SHIP_SIZE;
+    const bgCtx = base.getContext("2d");
+    bgCtx.imageSmoothingEnabled = false;
+    drawShipUp(bgCtx);
+    for (let i = 0; i < SHIP_ROT_FRAMES; i++) {
+      const c = document.createElement("canvas");
+      c.width = SHIP_SIZE; c.height = SHIP_SIZE;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      const a = (i / SHIP_ROT_FRAMES) * Math.PI * 2;
+      g.translate(SHIP_SIZE/2, SHIP_SIZE/2);
+      g.rotate(a);
+      g.translate(-SHIP_SIZE/2, -SHIP_SIZE/2);
+      g.drawImage(base, 0, 0);
+      shipFrames.push(c);
+    }
+  }
+
+  // ---------- Ship state ----------
+  const ship = {
+    x: 820, y: 820,
+    heading: -Math.PI / 2,
+    speed: 0,
+    maxSpeed: 85,
+    accel: 48,
+    decel: 26,
+    brake: 90,
+    turnRate: 1.85,
+    bob: 0,
+  };
+  const wake = [];
+  function spawnWake() {
+    const sx = ship.x - Math.cos(ship.heading) * 10;
+    const sy = ship.y - Math.sin(ship.heading) * 10;
+    wake.push({
+      x: sx + (Math.random() - 0.5) * 4,
+      y: sy + (Math.random() - 0.5) * 4,
+      life: 1,
+      size: 1 + Math.random() * 1.5,
+    });
+  }
+
+  // ---------- Minimap ----------
+  const MM_W = 110, MM_H = 82;
+  const mmBg = document.createElement("canvas");
+  mmBg.width = MM_W; mmBg.height = MM_H;
+  function bakeMinimap() {
+    const g = mmBg.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = "rgba(10,20,32,0.75)";
+    g.fillRect(0, 0, MM_W, MM_H);
+    // land blobs
+    const sx = MM_W / WORLD.w, sy = MM_H / WORLD.h;
+    const img = g.getImageData(0, 0, MM_W, MM_H);
+    const d = img.data;
+    for (let py = 0; py < MM_H; py++) {
+      for (let px = 0; px < MM_W; px++) {
+        const wx = px / sx, wy = py / sy;
+        const f = islandField(wx, wy);
+        const i = (py * MM_W + px) * 4;
+        if (f < -14) {
+          d[i] = 74; d[i+1] = 136; d[i+2] = 56; d[i+3] = 230;
+        } else if (f < 0) {
+          d[i] = 230; d[i+1] = 200; d[i+2] = 136; d[i+3] = 230;
+        }
+      }
+    }
+    g.putImageData(img, 0, 0);
+    // border
+    g.strokeStyle = "#f4e4b4";
+    g.lineWidth = 1;
+    g.strokeRect(0.5, 0.5, MM_W - 1, MM_H - 1);
+  }
+
+  function drawMinimap() {
+    const mx = W - MM_W - 6, my = H - MM_H - 6;
+    ctx.drawImage(mmBg, mx, my);
+    const sx = MM_W / WORLD.w, sy = MM_H / WORLD.h;
+    // stations
+    for (const s of STATIONS) {
+      const px = mx + s.x * sx, py = my + s.y * sy;
+      const v = visited.has(s.id);
+      ctx.fillStyle = v ? s.color : "rgba(244,228,180,0.5)";
+      ctx.fillRect((px - 1)|0, (py - 1)|0, 3, 3);
+      if (!v) {
+        // pulsing ring for unvisited
+        const p = 0.5 + 0.5 * Math.sin(time * 4 + s.x);
+        ctx.fillStyle = `rgba(255,214,106,${0.4 + p * 0.5})`;
+        ctx.fillRect((px - 2)|0, py|0, 1, 1);
+        ctx.fillRect((px + 2)|0, py|0, 1, 1);
+        ctx.fillRect(px|0, (py - 2)|0, 1, 1);
+        ctx.fillRect(px|0, (py + 2)|0, 1, 1);
+      }
+    }
+    // ship
+    const px = mx + ship.x * sx, py = my + ship.y * sy;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect((px - 1)|0, (py - 1)|0, 3, 3);
+    ctx.fillStyle = "#d8402a";
+    ctx.fillRect(px|0, py|0, 1, 1);
+  }
+
+  // ---------- Input ----------
+  const keys = Object.create(null);
+  let panelOpen = false;
+  let nearestStation = null;
+
+  addEventListener("keydown", e => {
+    if (e.repeat) return;
+    keys[e.code] = true;
+    if (["KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (e.code === "KeyE") {
+      if (panelOpen) closePanel();
+      else if (nearestStation) openPanel(nearestStation.id);
+    }
+    if (e.code === "Escape" && panelOpen) closePanel();
+    if (e.code === "Space" && !panelOpen) fireCannon();
+  });
+  addEventListener("keyup", e => { keys[e.code] = false; });
+
+  function input() {
+    if (panelOpen) return { up: false, down: false, left: false, right: false };
+    return {
+      up:    keys.KeyW || keys.ArrowUp,
+      down:  keys.KeyS || keys.ArrowDown,
+      left:  keys.KeyA || keys.ArrowLeft,
+      right: keys.KeyD || keys.ArrowRight,
+    };
+  }
+
+  // ---------- Panel ----------
+  const scrim = document.getElementById("scrim");
+  const panelBody = document.getElementById("panel-body");
+  function openPanel(id) {
+    panelBody.innerHTML = CONTENT[id];
+    const vid = panelBody.querySelector("video");
+    if (vid) vid.play().catch(() => {});
+    scrim.classList.add("on");
+    panelOpen = true;
+    if (!visited.has(id)) {
+      visited.add(id);
+      chartedEl.textContent = visited.size;
+    }
+  }
+  function closePanel() {
+    scrim.classList.remove("on");
+    panelOpen = false;
+  }
+  scrim.addEventListener("click", e => {
+    if (e.target === scrim) closePanel();
+  });
+
+  // ---------- Update ----------
+  let lastT = performance.now();
+  let time = 0;
+
+  function update(dt) {
+    time += dt;
+    cannonCooldown = Math.max(0, cannonCooldown - dt);
+
+    const { up, down, left, right } = input();
+    if (up)        ship.speed += ship.accel * dt;
+    else if (down) ship.speed -= ship.brake * dt;
+    else {
+      if (ship.speed > 0) ship.speed = Math.max(0, ship.speed - ship.decel * dt);
+      else if (ship.speed < 0) ship.speed = Math.min(0, ship.speed + ship.decel * dt);
+    }
+    ship.speed = Math.max(-ship.maxSpeed * 0.4, Math.min(ship.maxSpeed, ship.speed));
+
+    const turnAuth = Math.min(1, Math.abs(ship.speed) / 25);
+    const turnSign = ship.speed < 0 ? -1 : 1;
+    if (left)  ship.heading -= ship.turnRate * turnAuth * turnSign * dt;
+    if (right) ship.heading += ship.turnRate * turnAuth * turnSign * dt;
+
+    const nx = ship.x + Math.cos(ship.heading) * ship.speed * dt;
+    const ny = ship.y + Math.sin(ship.heading) * ship.speed * dt;
+    if (islandField(nx, ny) > 4) { ship.x = nx; ship.y = ny; }
+    else { ship.speed *= -0.35; }
+
+    const margin = 16;
+    ship.x = Math.max(margin, Math.min(WORLD.w - margin, ship.x));
+    ship.y = Math.max(margin, Math.min(WORLD.h - margin, ship.y));
+
+    ship.bob = Math.sin(time * 2.4) * 0.6 + Math.sin(time * 3.7) * 0.3;
+
+    if (Math.abs(ship.speed) > 12 && Math.random() < Math.abs(ship.speed) / 80) spawnWake();
+    for (let i = wake.length - 1; i >= 0; i--) {
+      wake[i].life -= dt * 0.8;
+      if (wake[i].life <= 0) wake.splice(i, 1);
+    }
+
+    // cannonballs
+    for (let i = cannonballs.length - 1; i >= 0; i--) {
+      const cb = cannonballs[i];
+      cb.x += cb.vx * dt;
+      cb.y += cb.vy * dt;
+      cb.life -= dt;
+      let dead = false;
+
+      // hit barrel?
+      for (const b of barrels) {
+        if (!b.alive) continue;
+        const dx = cb.x - b.x, dy = cb.y - b.y;
+        if (dx*dx + dy*dy < 6*6) { explodeBarrel(b); dead = true; break; }
+      }
+      // hit land?
+      if (!dead && islandField(cb.x, cb.y) < -2) {
+        // little puff of sparks on impact
+        for (let k = 0; k < 8; k++) {
+          const a = Math.random() * Math.PI * 2;
+          particles.push({
+            x: cb.x, y: cb.y,
+            vx: Math.cos(a) * 40, vy: Math.sin(a) * 40,
+            life: 0.25, color: "#c0a080", size: 1,
+          });
+        }
+        dead = true;
+      }
+      if (!dead && cb.life <= 0) { splashAt(cb.x, cb.y); dead = true; }
+      if (dead) cannonballs.splice(i, 1);
+    }
+
+    // particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.92; p.vy *= 0.92;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // barrels drift + respawn
+    for (const b of barrels) {
+      if (b.alive) {
+        b.wobble += dt;
+        b.x = b.baseX + Math.sin(b.wobble * 0.7) * 3;
+        b.y = b.baseY + Math.cos(b.wobble * 0.9) * 2;
+      } else {
+        b.respawnAt -= dt;
+        if (b.respawnAt <= 0) {
+          b.alive = true;
+          b.x = b.baseX; b.y = b.baseY;
+        }
+      }
+    }
+
+    // proximity check
+    nearestStation = null;
+    let best = 42 * 42;
+    for (const s of STATIONS) {
+      const dx = ship.x - s.x, dy = ship.y - s.y;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < best) { best = d2; nearestStation = s; }
+    }
+    const prox = document.getElementById("prox");
+    if (nearestStation && !panelOpen) {
+      document.getElementById("prox-name").textContent = nearestStation.name;
+      prox.classList.add("on");
+    } else {
+      prox.classList.remove("on");
+    }
+  }
+
+  // ---------- Render ----------
+  const cam = { x: ship.x, y: ship.y };
+
+  function drawStation(s, viewX, viewY) {
+    const sx = (s.x - viewX) | 0, sy = (s.y - viewY) | 0;
+    if (sx < -20 || sx > W + 20 || sy < -30 || sy > H + 20) return;
+    const bob = Math.sin(time * 2 + s.x * 0.01) * 0.7;
+    const v = visited.has(s.id);
+    const pulse = v ? 1 : 0.6 + 0.4 * Math.sin(time * 3 + s.x);
+
+    // base (buoy body or post)
+    if (s.kind === "buoy" || s.kind === "flag") {
+      // buoy: round body + ring + flag
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(sx - 3, sy + 4, 7, 2);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(sx - 3, sy - 2 + bob, 6, 5);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(sx - 3, sy + bob, 6, 1);
+      // pole + flag
+      ctx.fillStyle = "#2a1a10";
+      ctx.fillRect(sx, sy - 10 + bob, 1, 8);
+      ctx.fillStyle = v ? s.color : "#d8d8d8";
+      ctx.fillRect(sx + 1, sy - 10 + bob, 4, 3);
+    } else if (s.kind === "sign") {
+      // signpost: post + wooden plaque
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(sx - 4, sy + 5, 9, 2);
+      ctx.fillStyle = "#4a3018";
+      ctx.fillRect(sx, sy - 10 + bob, 1, 14);
+      ctx.fillStyle = "#8a5a2a";
+      ctx.fillRect(sx - 5, sy - 10 + bob, 11, 6);
+      ctx.fillStyle = "#6a3a10";
+      ctx.fillRect(sx - 5, sy - 10 + bob, 11, 1);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(sx - 3, sy - 8 + bob, 7, 2);
+    } else if (s.kind === "tower") {
+      // small mini-marker in front of baked tower: just a red pennant buoy
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(sx - 3, sy + 4, 7, 2);
+      ctx.fillStyle = "#2a1a10";
+      ctx.fillRect(sx, sy - 8 + bob, 1, 12);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(sx + 1, sy - 8 + bob, 4, 3);
+    } else if (s.kind === "crate") {
+      // weapons crate on water
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(sx - 5, sy + 4, 11, 2);
+      ctx.fillStyle = "#8a5a2a";
+      ctx.fillRect(sx - 5, sy - 4 + bob, 11, 9);
+      ctx.fillStyle = "#4a3018";
+      ctx.fillRect(sx - 5, sy - 4 + bob, 11, 1);
+      ctx.fillRect(sx - 5, sy + 4 + bob, 11, 1);
+      ctx.fillRect(sx - 5, sy - 4 + bob, 1, 9);
+      ctx.fillRect(sx + 5, sy - 4 + bob, 1, 9);
+      ctx.fillStyle = s.color;
+      ctx.fillRect(sx - 2, sy - 1 + bob, 5, 3); // label
+    }
+
+    // highlight ring if unvisited
+    if (!v) {
+      ctx.fillStyle = `rgba(255,214,106,${pulse * 0.8})`;
+      const r = 10 + Math.sin(time * 2 + s.x) * 2;
+      for (let t = 0; t < 16; t++) {
+        const ang = (t / 16) * Math.PI * 2;
+        const px = sx + Math.cos(ang) * r;
+        const py = sy + Math.sin(ang) * r * 0.5 + bob;
+        ctx.fillRect(px|0, py|0, 1, 1);
+      }
+    }
+  }
+
+  function drawBarrel(b, viewX, viewY) {
+    if (!b.alive) return;
+    const sx = (b.x - viewX) | 0, sy = (b.y - viewY) | 0;
+    if (sx < -10 || sx > W + 10 || sy < -10 || sy > H + 10) return;
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillRect(sx - 3, sy + 2, 7, 2);
+    ctx.fillStyle = "#8a5a2a";
+    ctx.fillRect(sx - 3, sy - 3, 7, 7);
+    ctx.fillStyle = "#4a3018";
+    ctx.fillRect(sx - 3, sy - 2, 7, 1);
+    ctx.fillRect(sx - 3, sy + 1, 7, 1);
+    ctx.fillStyle = "#6a4020";
+    ctx.fillRect(sx - 3, sy - 3, 1, 7);
+    ctx.fillRect(sx + 3, sy - 3, 1, 7);
+  }
+
+  function render() {
+    cam.x += (ship.x - cam.x) * 0.12;
+    cam.y += (ship.y - cam.y) * 0.12;
+    const viewX = Math.max(0, Math.min(WORLD.w - W, (cam.x - W/2)|0));
+    const viewY = Math.max(0, Math.min(WORLD.h - H, (cam.y - H/2)|0));
+
+    ctx.drawImage(bg, viewX, viewY, W, H, 0, 0, W, H);
+
+    // water sparkles
+    ctx.fillStyle = "rgba(220,240,240,0.55)";
+    const startX = Math.floor(viewX / 8) * 8;
+    const startY = Math.floor(viewY / 8) * 8;
+    for (let y = startY; y < viewY + H + 8; y += 8) {
+      for (let x = startX; x < viewX + W + 8; x += 8) {
+        const f = islandField(x, y);
+        if (f < 12) continue;
+        const h = hash(x, y);
+        const phase = (h * 6.28 + time * (0.7 + h * 0.8)) % 6.28;
+        if (Math.sin(phase) > 0.94) {
+          const dx = Math.floor(Math.sin(time * 0.3 + h * 10) * 2);
+          const dy = Math.floor(Math.cos(time * 0.25 + h * 7) * 2);
+          ctx.fillRect(x - viewX + dx, y - viewY + dy, 1, 1);
+        }
+      }
+    }
+
+    // wake
+    for (const w of wake) {
+      const a = Math.max(0, w.life);
+      ctx.fillStyle = `rgba(230,245,245,${a * 0.8})`;
+      const sx = (w.x - viewX) | 0, sy = (w.y - viewY) | 0;
+      ctx.fillRect(sx, sy, w.size|0, w.size|0);
+    }
+
+    // barrels (under cannonballs)
+    for (const b of barrels) drawBarrel(b, viewX, viewY);
+
+    // stations
+    for (const s of STATIONS) drawStation(s, viewX, viewY);
+
+    // cannonballs
+    for (const cb of cannonballs) {
+      const sx = (cb.x - viewX) | 0, sy = (cb.y - viewY) | 0;
+      // shadow on water
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillRect(sx + 1, sy + 2, 3, 2);
+      // ball
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(sx - 1, sy - 1, 3, 3);
+      ctx.fillStyle = "#404040";
+      ctx.fillRect(sx - 1, sy - 1, 1, 1);
+      // faint smoke trail
+      ctx.fillStyle = "rgba(200,200,200,0.35)";
+      ctx.fillRect((sx - cb.vx * 0.02)|0, (sy - cb.vy * 0.02)|0, 1, 1);
+    }
+
+    // particles
+    for (const p of particles) {
+      const sx = (p.x - viewX) | 0, sy = (p.y - viewY) | 0;
+      const a = Math.max(0, Math.min(1, p.life * 2));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(sx, sy, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // ship
+    let ang = ship.heading + Math.PI / 2;
+    ang = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const frame = Math.round(ang / (Math.PI * 2) * SHIP_ROT_FRAMES) % SHIP_ROT_FRAMES;
+    const sprite = shipFrames[frame];
+    const sx = (ship.x - SHIP_SIZE/2 - viewX) | 0;
+    const sy = (ship.y - SHIP_SIZE/2 - viewY + ship.bob) | 0;
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(sx + 8, sy + SHIP_SIZE - 4, SHIP_SIZE - 16, 2);
+    ctx.drawImage(sprite, sx, sy);
+
+    // minimap
+    drawMinimap();
+
+    // border vignette
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, 0, W, 2);
+    ctx.fillRect(0, H - 2, W, 2);
+    ctx.fillRect(0, 0, 2, H);
+    ctx.fillRect(W - 2, 0, 2, H);
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Boot ----------
+  ctx.fillStyle = "#0a1420";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#f4e4b4";
+  ctx.font = "10px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("charting the waters…", W/2, H/2);
+
+  setTimeout(() => {
+    bakeWorld();
+    bakeShip();
+    bakeMinimap();
+    lastT = performance.now();
+    requestAnimationFrame(frame);
+  }, 30);
+})();
+</script>
+</body>
+</html>
