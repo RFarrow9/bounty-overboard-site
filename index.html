@@ -200,6 +200,13 @@
   .card li{padding:7px 0; border-bottom:1px dashed #22394833; color:#e2d8c8}
   .card li b{color:var(--ink)}
 
+  /* ---- Tech specs ---- */
+  .specs{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px}
+  .spec{background:rgba(11,26,35,.62); border:1px solid var(--line); border-radius:12px; padding:18px 20px; border-top:3px solid var(--teal)}
+  .spec b{display:block; font-family:"Pirata",serif; font-weight:400; font-size:22px; color:var(--gold); margin-bottom:5px}
+  .spec span{color:var(--muted); font-size:14px}
+  @media(max-width:720px){.specs{grid-template-columns:1fr}}
+
   footer{padding:44px 0; text-align:center; color:var(--muted); font-size:14px}
   footer .made{opacity:.7; margin-top:6px}
   .tag{display:inline-block; background:#1a2f1e; border:1px solid #3a5a42; color:#9fd6a8; font-size:12px; font-weight:700; padding:3px 11px; border-radius:20px; letter-spacing:.06em}
@@ -236,9 +243,9 @@
 
 <section>
   <div class="wrap">
-    <div class="eyebrow">In motion</div>
-    <h2 class="disp">Here it is, actually running</h2>
-    <p class="lede">Top-down sailing, real broadsides, a bay that's alive around you. No mock-ups, no cuts.</p>
+    <div class="eyebrow">The world</div>
+    <h2 class="disp">A living, painterly sea</h2>
+    <p class="lede">Real-time in Godot, no cuts. The ship drifts at its mooring, the light turns to gold, and the water genuinely moves under it. Proper combat footage is next on the list.</p>
     <div style="margin-top:24px; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 16px 44px #0008; line-height:0">
       <video src="media/gameplay.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata" style="width:100%; display:block; background:#06101a"></video>
     </div>
@@ -352,6 +359,22 @@
         <li><b>The Dimensionalist</b> — CEO of the Cosmic Bank. Never raises his voice, only ever speaks in office-speak. "Let's take that offline."</li>
         <li><b>HR</b> — the last boss. Course it is.</li>
       </ul>
+    </div>
+  </div>
+</section>
+
+<section class="tint">
+  <div class="wrap">
+    <div class="eyebrow">Under the hood</div>
+    <h2 class="disp">Built to run, and run fast</h2>
+    <p class="lede">Performance is a feature. It's developed on a 32:9 ultrawide and tuned to stay smooth from a laptop to a proper rig.</p>
+    <div class="specs">
+      <div class="spec"><b>Ultrawide, natively</b><span>21:9 and 32:9 supported and framed properly — it's built and played on a 5120×1440.</span></div>
+      <div class="spec"><b>200 fps target</b><span>Aiming high on modern hardware. The renderer's kept lean so the frames stay high.</span></div>
+      <div class="spec"><b>Godot 4.6 · Forward+</b><span>Modern renderer with custom painterly water, caustics and lighting.</span></div>
+      <div class="spec"><b>Auto quality</b><span>It reads your GPU and scales itself Low → Ultra, so it just works out of the box.</span></div>
+      <div class="spec"><b>Jolt physics</b><span>Proper rigid-body ships riding real waves, not scripted bobbing.</span></div>
+      <div class="spec"><b>Windows, one file</b><span>PC first. A single self-contained build — download, double-click, sail.</span></div>
     </div>
   </div>
 </section>
