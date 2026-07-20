@@ -4,193 +4,266 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bounty Overboard — a top-down pirate action game</title>
-<meta name="description" content="One day from retirement, the Cosmic Bank froze Captain Wilf's pension across eleven dimensional branch offices. So he's going to collect it — with cannons. A top-down pirate action game in the spirit of Overboard!, TimeSplitters and Banjo-Kazooie. Built in Godot.">
+<meta name="description" content="A day from retirement, Captain Wilf's pension gets frozen and scattered across eleven dimensions. He wants it back. A top-down pirate action game in the spirit of Overboard!, TimeSplitters and Banjo-Kazooie. Built in Godot.">
 <meta property="og:title" content="Bounty Overboard">
-<meta property="og:description" content="The bounty you're chasing is your own pension. That's the trick. A top-down pirate action game.">
+<meta property="og:description" content="A day from retirement, his pension gets frozen and scattered across eleven dimensions. He wants it back, with cannons.">
 <meta property="og:image" content="img/hero.jpg">
 <meta property="og:type" content="website">
 <style>
   @font-face{ font-family:"Pirata"; src:url("fonts/PirataOne.ttf") format("truetype"); font-display:swap; }
-  :root{
-    --ink:#f0e6d0; --muted:#a4bcc6; --gold:#e8b84a; --teal:#2ec4c4; --line:#1e3b4a;
-  }
+  :root{ --ink:#f0e6d0; --muted:#a6bec8; --gold:#e8b84a; --teal:#2ec4c4; --line:#1e3b4a; }
   *{box-sizing:border-box; margin:0; padding:0}
   html{scroll-behavior:smooth}
-  body{background:#050f18; color:var(--ink); font:16px/1.6 "Segoe UI",system-ui,-apple-system,sans-serif;
+  body{background:#04121b; color:var(--ink); font:16px/1.62 "Segoe UI",system-ui,-apple-system,sans-serif;
     -webkit-font-smoothing:antialiased; overflow-x:hidden}
   a{color:inherit}
   .disp{font-family:"Pirata",Georgia,serif; font-weight:400; letter-spacing:.02em; line-height:1.04}
-  .wrap{max-width:1120px; margin:0 auto; padding:0 22px}
+  .wrap{max-width:1140px; margin:0 auto; padding:0 22px}
   .gold{color:var(--gold)} .teal{color:var(--teal)}
 
-  /* ---- Animated water background (fixed, behind everything) ---- */
-  .water{position:fixed; inset:0; z-index:-3;
-    background:linear-gradient(180deg,#0c3b4b 0%,#0a2c3d 26%,#08212f 52%,#061824 78%,#040e16 100%)}
-  .caustics,.caustics2{position:fixed; inset:-25%; z-index:-2; pointer-events:none;
-    mix-blend-mode:screen; will-change:transform}
-  .caustics{opacity:.42;
-    background:
-      radial-gradient(38% 26% at 28% 22%, rgba(90,225,220,.20), transparent 68%),
-      radial-gradient(32% 22% at 68% 38%, rgba(120,235,205,.16), transparent 70%),
-      radial-gradient(44% 30% at 52% 74%, rgba(70,190,210,.14), transparent 70%);
-    animation:drift1 26s ease-in-out infinite alternate}
-  .caustics2{opacity:.26;
-    background:
-      radial-gradient(30% 20% at 62% 14%, rgba(150,240,220,.16), transparent 70%),
-      radial-gradient(40% 28% at 18% 62%, rgba(60,170,200,.14), transparent 72%);
-    animation:drift2 34s ease-in-out infinite alternate}
-  @keyframes drift1{from{transform:translate(-3%,-2%) scale(1.06)} to{transform:translate(4%,3%) scale(1.14)}}
-  @keyframes drift2{from{transform:translate(3%,2%) scale(1.1)} to{transform:translate(-4%,-3%) scale(1.02)}}
-  @media(prefers-reduced-motion:reduce){.caustics,.caustics2{animation:none}}
+  /* ---- Water: CSS depth gradient + animated caustics canvas ---- */
+  #seabg{position:fixed; inset:0; z-index:-3;
+    background:linear-gradient(180deg,#0e4658 0%,#0b3346 24%,#092838 48%,#071d2b 72%,#04121b 100%)}
+  #waterfx{position:fixed; inset:0; z-index:-2; pointer-events:none}
 
   /* ---- Hero ---- */
-  .hero{position:relative; min-height:90vh; display:flex; align-items:center;
-    background:
-      linear-gradient(180deg, rgba(6,16,24,.30) 0%, rgba(6,16,24,.5) 55%, #050f18 100%),
-      url("img/hero.jpg") center 35%/cover no-repeat;
-    text-align:center; padding:70px 0}
+  .hero{position:relative; min-height:92vh; display:flex; align-items:center; text-align:center; padding:74px 0;
+    background:linear-gradient(180deg, rgba(4,14,22,.28) 0%, rgba(4,14,22,.5) 58%, #04121b 100%),
+      url("img/hero.jpg") center 34%/cover no-repeat}
   .hero .wrap{position:relative}
-  .hero h1{font-size:clamp(46px,9vw,104px); text-shadow:0 4px 22px #000a, 0 2px 0 #4a2d10}
+  .kicker{font-size:clamp(14px,2.3vw,20px); letter-spacing:.34em; text-transform:uppercase; opacity:.92;
+    margin-bottom:16px; text-shadow:0 2px 12px #000}
+  .hero h1{font-size:clamp(46px,9.4vw,108px); text-shadow:0 4px 24px #000b, 0 2px 0 #4a2d10}
   .hero h1 .b{color:var(--gold)}
-  .kicker{font-size:clamp(15px,2.4vw,21px); color:var(--ink); letter-spacing:.34em; text-transform:uppercase;
-    opacity:.9; margin-bottom:18px; text-shadow:0 2px 10px #000}
-  .hook{max-width:60ch; margin:20px auto 0; font-size:clamp(17px,2.3vw,21px); color:#fdf6e6; text-wrap:pretty;
-    text-shadow:0 2px 12px #000b}
-  .hook b{color:var(--gold)}
-  .spirit{margin:22px auto 0; color:#cfe6ea; font-size:15px; letter-spacing:.02em; text-shadow:0 2px 10px #000}
-  .spirit a{color:#fff; text-decoration:underline; text-underline-offset:3px; text-decoration-color:#ffffff66}
+  .hook{max-width:56ch; margin:22px auto 0; font-size:clamp(17px,2.3vw,22px); color:#fdf6e6; text-wrap:pretty;
+    text-shadow:0 2px 14px #000c}
+  .spirit{margin:20px auto 0; color:#d3ebef; font-size:15px; text-shadow:0 2px 10px #000}
+  .spirit a{color:#fff; text-decoration:underline; text-underline-offset:3px; text-decoration-color:#ffffff55}
   .spirit a:hover{text-decoration-color:#fff}
   .cta-row{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:30px}
-  .btn{display:inline-flex; align-items:center; gap:9px; padding:14px 26px; border-radius:9px;
-    font-weight:700; font-size:17px; text-decoration:none; border:1px solid transparent; transition:.15s; cursor:pointer}
-  .btn.gold{background:linear-gradient(#e8b84a,#cf9a2e); border-color:#f2cf6a; color:#2a1d05;
-    box-shadow:0 4px 0 #7a5410,0 8px 22px #0007}
+  .btn{display:inline-flex; align-items:center; gap:9px; padding:14px 26px; border-radius:9px; font-weight:700;
+    font-size:17px; text-decoration:none; border:1px solid transparent; transition:.15s; cursor:pointer}
+  .btn.gold{background:linear-gradient(#e8b84a,#cf9a2e); border-color:#f2cf6a; color:#2a1d05; box-shadow:0 4px 0 #7a5410,0 8px 22px #0007}
   .btn.gold:hover{transform:translateY(-2px)}
   .btn.dim{opacity:.72; cursor:not-allowed}
   .scrolls{position:absolute; bottom:20px; left:0; right:0; text-align:center; color:#cfe6ea; opacity:.7; font-size:13px}
 
-  /* ---- Sections (transparent so the water shows through) ---- */
-  section{padding:74px 0; position:relative}
-  .eyebrow{color:var(--teal); letter-spacing:.28em; text-transform:uppercase; font-size:13px; font-weight:700; margin-bottom:10px}
-  h2.disp{font-size:clamp(30px,5vw,46px); margin-bottom:14px; text-wrap:balance}
-  .lede{color:var(--muted); max-width:66ch; font-size:18px; text-wrap:pretty}
-  .pitch p{max-width:66ch; margin-top:14px; color:#e8ded0; text-wrap:pretty}
-  .pitch em{color:var(--teal); font-style:normal}
-  .panel-tint{background:rgba(7,22,31,.55); backdrop-filter:blur(2px); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+  /* ---- Sections ---- */
+  section{padding:78px 0; position:relative}
+  .eyebrow{color:var(--teal); letter-spacing:.26em; text-transform:uppercase; font-size:13px; font-weight:700; margin-bottom:10px}
+  h2.disp{font-size:clamp(30px,5vw,48px); margin-bottom:14px; text-wrap:balance}
+  .lede{color:var(--muted); max-width:64ch; font-size:18px; text-wrap:pretty}
+  .prose p{max-width:62ch; margin-top:14px; color:#e7ddcf; text-wrap:pretty}
+  .prose em{color:var(--teal); font-style:normal}
+  .tint{background:rgba(5,20,29,.5); backdrop-filter:blur(3px); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
 
   /* ---- Screenshot strip ---- */
   .gal{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px}
   .shot{position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 10px 30px #0006}
   .shot img{width:100%; display:block; aspect-ratio:1400/393; object-fit:cover}
-  .shot .cap{position:absolute; left:0; bottom:0; right:0; padding:22px 12px 10px;
-    background:linear-gradient(transparent, #06101799 55%, #061017ee)}
+  .shot .cap{position:absolute; inset:auto 0 0 0; padding:24px 14px 11px; background:linear-gradient(transparent,#06101799 55%,#061017ee)}
   .shot .cap b{font-family:"Pirata",serif; font-size:19px; color:var(--gold)}
   @media(max-width:720px){.gal{grid-template-columns:1fr}}
 
-  /* ---- 11 themed biome boxes ---- */
-  .biomes{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:15px; margin-top:26px}
-  .biome{position:relative; overflow:hidden; border-radius:12px; padding:18px 18px 16px;
-    background:linear-gradient(158deg, color-mix(in srgb, var(--c) 16%, #0b1f28), rgba(9,22,30,.85) 72%);
-    border:1px solid color-mix(in srgb, var(--c) 38%, #163040); border-left:4px solid var(--c);
-    box-shadow:0 8px 24px #0005; transition:transform .16s, box-shadow .16s}
-  .biome:hover{transform:translateY(-3px); box-shadow:0 14px 30px #0007, 0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent)}
-  .biome::after{content:""; position:absolute; inset:0; pointer-events:none;
-    background:radial-gradient(75% 55% at 100% 0%, color-mix(in srgb, var(--c) 24%, transparent), transparent 70%)}
-  .biome .bn{position:absolute; right:12px; top:4px; font-family:"Pirata",serif; font-size:30px;
-    color:var(--c); opacity:.28}
-  .biome h3{font-family:"Pirata",serif; font-weight:400; font-size:23px; line-height:1.05;
-    color:color-mix(in srgb, var(--c) 82%, #fff); position:relative}
-  .biome p{color:#c6d6dc; font-size:13.5px; margin-top:5px; position:relative}
+  /* ---- 11 themed biome boxes (each with its own living effect) ---- */
+  .biomes{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; margin-top:30px}
+  .biome{position:relative; overflow:hidden; border-radius:14px; padding:22px 22px 20px; min-height:158px;
+    isolation:isolate; border:1px solid color-mix(in srgb,var(--c) 34%,#122a37); border-left:4px solid var(--c);
+    background:linear-gradient(158deg, color-mix(in srgb,var(--c) 15%,#0a1c26), rgba(7,19,27,.9) 74%);
+    box-shadow:0 10px 30px #0006; transition:transform .18s, box-shadow .18s}
+  .biome:hover{transform:translateY(-4px); box-shadow:0 18px 38px #0008}
+  .biome .bn{position:absolute; right:14px; top:6px; z-index:2; font-family:"Pirata",serif; font-size:34px; color:var(--c); opacity:.3}
+  .biome h3{position:relative; z-index:2; font-family:"Pirata",serif; font-weight:400; font-size:25px; line-height:1.05;
+    color:color-mix(in srgb,var(--c) 80%,#fff)}
+  .biome p{position:relative; z-index:2; color:#cad9df; font-size:14px; margin-top:6px}
   .biome .final{color:var(--gold); font-weight:600}
+  .fx{position:absolute; inset:0; z-index:1; pointer-events:none}
+  @media(prefers-reduced-motion:reduce){ .fx,.fx::before,.fx::after{animation:none !important} }
 
-  /* ---- Inspired-by cards ---- */
+  /* Caribbean — sunlit caustic sweep */
+  .fx-carib{background:
+    repeating-linear-gradient(115deg, transparent 0 22px, rgba(120,240,230,.05) 22px 26px);
+    animation:sweep 7s linear infinite}
+  @keyframes sweep{to{background-position:120px 0}}
+  /* Midnight Reef — drifting spectral fog + slow glow */
+  .fx-reef::before{content:""; position:absolute; inset:-40%;
+    background:radial-gradient(40% 40% at 30% 60%, rgba(79,227,160,.22), transparent 70%),
+              radial-gradient(35% 35% at 75% 30%, rgba(90,255,190,.16), transparent 70%);
+    animation:fog 11s ease-in-out infinite alternate}
+  @keyframes fog{from{transform:translate(-6%,3%)}to{transform:translate(8%,-4%)}}
+  /* Frozen Assets — frost creeping from the corners + sparkle */
+  .fx-frost::before{content:""; position:absolute; inset:0;
+    background:radial-gradient(60% 60% at 0 0, rgba(220,244,255,.34), transparent 60%),
+              radial-gradient(60% 60% at 100% 100%, rgba(200,235,255,.28), transparent 60%);
+    mix-blend-mode:screen; animation:breathe 6s ease-in-out infinite alternate}
+  .fx-frost::after{content:""; position:absolute; inset:0;
+    background-image:radial-gradient(1.6px 1.6px at 20% 30%, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 66% 22%, #eaf6ff, transparent),
+      radial-gradient(1.5px 1.5px at 44% 70%, #fff, transparent),
+      radial-gradient(1.3px 1.3px at 82% 62%, #dff1ff, transparent),
+      radial-gradient(1.4px 1.4px at 12% 82%, #fff, transparent);
+    animation:twinkle 3.4s steps(1) infinite}
+  @keyframes breathe{from{opacity:.6}to{opacity:1}}
+  @keyframes twinkle{0%,100%{opacity:.35}50%{opacity:.9}}
+  /* KrakenCon — slow eldritch swirl */
+  .fx-kraken::before{content:""; position:absolute; inset:-60%;
+    background:conic-gradient(from 0deg, transparent, rgba(182,117,230,.22), transparent 40%, rgba(255,80,190,.14), transparent 70%);
+    animation:spin 16s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* Edo Japan — falling petals + rising-sun glow */
+  .fx-edo::before{content:""; position:absolute; inset:0;
+    background:radial-gradient(70% 50% at 80% 0, rgba(239,107,92,.24), transparent 65%)}
+  .fx-edo::after{content:""; position:absolute; inset:-20% 0 0 0;
+    background-image:radial-gradient(3px 4px at 20% 0, #ffd0cf, transparent),
+      radial-gradient(3px 4px at 55% 0, #ffb9c6, transparent),
+      radial-gradient(2px 3px at 80% 0, #ffd0cf, transparent);
+    background-repeat:no-repeat; animation:petals 5.5s linear infinite}
+  @keyframes petals{from{transform:translateY(-20%) rotate(0)}to{transform:translateY(140%) rotate(40deg)}}
+  /* Volcanic — LIVING LAVA + rising embers */
+  .fx-lava::before{content:""; position:absolute; inset:auto 0 0 0; height:70%;
+    background:radial-gradient(60% 80% at 25% 120%, #ff5a1e 0%, rgba(255,120,40,.5) 35%, transparent 62%),
+              radial-gradient(55% 70% at 75% 120%, #ff8a2a 0%, rgba(255,90,20,.45) 40%, transparent 66%);
+    filter:blur(2px); animation:lava 3.2s ease-in-out infinite alternate}
+  .fx-lava::after{content:""; position:absolute; inset:0;
+    background-image:radial-gradient(2px 2px at 30% 90%, #ffd08a, transparent),
+      radial-gradient(2px 2px at 62% 90%, #ffb45a, transparent),
+      radial-gradient(1.6px 1.6px at 46% 90%, #fff1c0, transparent);
+    animation:embers 3.8s linear infinite}
+  @keyframes lava{from{transform:translateX(-6%) scaleY(.94); filter:blur(2px) brightness(.9)}
+    to{transform:translateX(6%) scaleY(1.06); filter:blur(2px) brightness(1.25)}}
+  @keyframes embers{from{transform:translateY(0); opacity:0}20%{opacity:1}to{transform:translateY(-150%); opacity:0}}
+  /* Cyberpunk — neon scanlines + flicker */
+  .fx-cyber::before{content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(0deg, rgba(47,227,227,.09) 0 1px, transparent 1px 4px)}
+  .fx-cyber::after{content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg, rgba(47,227,227,.12), transparent 40%, rgba(255,60,160,.12));
+    animation:flick 4s steps(2) infinite}
+  @keyframes flick{0%,100%{opacity:.5}45%{opacity:1}47%{opacity:.3}}
+  /* Aztec — gold glint sweeping over jade */
+  .fx-aztec::after{content:""; position:absolute; inset:0; transform:translateX(-100%);
+    background:linear-gradient(105deg, transparent 40%, rgba(255,216,120,.35) 50%, transparent 60%);
+    animation:glint 5.5s ease-in-out infinite}
+  @keyframes glint{0%,60%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  /* Prehistoric — rising spores in amber */
+  .fx-prehist::after{content:""; position:absolute; inset:0;
+    background-image:radial-gradient(2.2px 2.2px at 25% 90%, #e6c15a, transparent),
+      radial-gradient(2px 2px at 60% 95%, #d0a53f, transparent),
+      radial-gradient(1.8px 1.8px at 80% 88%, #f0d484, transparent);
+    animation:spores 7s linear infinite}
+  @keyframes spores{from{transform:translateY(10%); opacity:0}25%{opacity:.9}to{transform:translateY(-120%); opacity:0}}
+  /* Egyptian — sunbeam sweep over shifting sand */
+  .fx-egypt::before{content:""; position:absolute; inset:0;
+    background:linear-gradient(160deg, rgba(232,198,106,.12), transparent 55%); animation:breathe 8s ease-in-out infinite alternate}
+  .fx-egypt::after{content:""; position:absolute; top:-30%; left:-20%; width:60%; height:160%; transform:rotate(18deg);
+    background:linear-gradient(90deg, transparent, rgba(255,230,150,.28), transparent); animation:beam 6s ease-in-out infinite}
+  @keyframes beam{0%,100%{transform:rotate(18deg) translateX(-40%)}50%{transform:rotate(18deg) translateX(220%)}}
+  /* Cosmic Void — twinkling starfield + nebula drift */
+  .fx-cosmic::before{content:""; position:absolute; inset:-40%;
+    background:radial-gradient(50% 50% at 60% 40%, rgba(143,123,255,.28), transparent 70%),
+              radial-gradient(40% 40% at 25% 70%, rgba(90,120,255,.2), transparent 70%);
+    animation:fog 18s ease-in-out infinite alternate}
+  .fx-cosmic::after{content:""; position:absolute; inset:0;
+    background-image:radial-gradient(1.5px 1.5px at 15% 20%, #fff, transparent),
+      radial-gradient(1.3px 1.3px at 70% 15%, #cfe, transparent),
+      radial-gradient(1.6px 1.6px at 40% 55%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 85% 45%, #dcd6ff, transparent),
+      radial-gradient(1.5px 1.5px at 55% 80%, #fff, transparent),
+      radial-gradient(1.3px 1.3px at 25% 85%, #e0dbff, transparent);
+    animation:twinkle 2.6s steps(1) infinite}
+
+  /* ---- Inspired-by ---- */
   .inspo{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:26px}
-  .insp{display:block; text-decoration:none; background:rgba(10,26,35,.6); border:1px solid var(--line);
-    border-radius:12px; padding:20px 22px; transition:.15s}
+  .insp{display:block; text-decoration:none; background:rgba(9,24,33,.6); border:1px solid var(--line); border-radius:12px; padding:20px 22px; transition:.15s}
   a.insp:hover{border-color:var(--teal); transform:translateY(-3px)}
   .insp b{font-family:"Pirata",serif; font-weight:400; font-size:24px; color:var(--gold); display:block; margin-bottom:6px}
   .insp span{color:var(--muted); font-size:14.5px; text-wrap:pretty}
   .insp .go{color:var(--teal); font-size:13px; font-weight:700; margin-top:10px; display:inline-block}
   @media(max-width:720px){.inspo{grid-template-columns:1fr}}
 
-  /* ---- Feature columns ---- */
-  .cols{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:26px}
-  .card{background:rgba(12,28,37,.62); border:1px solid var(--line); border-radius:12px; padding:22px 24px}
-  .card h3{font-family:"Pirata",serif; font-weight:400; font-size:26px; color:var(--gold); margin-bottom:6px}
-  .card p{color:var(--muted); margin-bottom:10px}
+  /* ---- Arsenal ---- */
+  .chips{display:flex; flex-wrap:wrap; gap:9px; margin-top:18px}
+  .chip{background:rgba(12,28,37,.7); border:1px solid var(--line); border-radius:20px; padding:7px 14px; font-size:14px; color:#e6dccb}
+  .chip b{color:var(--gold); font-weight:700}
+  .statrow{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
+  .stat{display:inline-flex; align-items:center; gap:7px; border-radius:9px; padding:8px 13px; font-size:14px; font-weight:600;
+    border:1px solid color-mix(in srgb,var(--c) 45%,#1a3140); background:color-mix(in srgb,var(--c) 12%,#0a1c26); color:color-mix(in srgb,var(--c) 75%,#fff)}
+  .combos{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px}
+  .combo{background:rgba(11,26,35,.66); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+  .combo .eq{font-family:"Pirata",serif; font-size:19px; color:var(--gold); margin-bottom:4px}
+  .combo p{color:var(--muted); font-size:14px}
+  @media(max-width:720px){.combos{grid-template-columns:1fr}}
+
+  /* ---- Cast ---- */
+  .card{background:rgba(12,28,37,.62); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin-top:26px}
+  .card h3{font-family:"Pirata",serif; font-weight:400; font-size:26px; color:var(--gold); margin-bottom:8px}
   .card ul{list-style:none}
-  .card li{padding:5px 0; border-bottom:1px dashed #22394833; color:#e2d8c8}
+  .card li{padding:7px 0; border-bottom:1px dashed #22394833; color:#e2d8c8}
   .card li b{color:var(--ink)}
-  .card li span{color:var(--muted)}
 
-  footer{padding:42px 0; text-align:center; color:var(--muted); font-size:14px}
+  footer{padding:44px 0; text-align:center; color:var(--muted); font-size:14px}
   footer .made{opacity:.7; margin-top:6px}
-  .tag{display:inline-block; background:#1a2f1e; border:1px solid #3a5a42; color:#9fd6a8;
-    font-size:12px; font-weight:700; padding:3px 11px; border-radius:20px; letter-spacing:.06em}
+  .tag{display:inline-block; background:#1a2f1e; border:1px solid #3a5a42; color:#9fd6a8; font-size:12px; font-weight:700; padding:3px 11px; border-radius:20px; letter-spacing:.06em}
   .band{text-align:center}
-
-  @media(max-width:760px){.cols{grid-template-columns:1fr} section{padding:52px 0} .hero{min-height:86vh}}
+  @media(max-width:760px){section{padding:54px 0} .hero{min-height:86vh}}
 </style>
 </head>
 <body>
-<div class="water"></div><div class="caustics"></div><div class="caustics2"></div>
+<div id="seabg"></div>
+<canvas id="waterfx"></canvas>
 
 <header class="hero">
   <div class="wrap">
     <div class="kicker">One day from retirement</div>
     <h1 class="disp">BOUNTY <span class="b">OVERBOARD</span></h1>
-    <p class="hook">The Cosmic Bank froze Captain Wilf Marlow's pension and scattered it across eleven dimensional branch offices. So he's going to collect it — with cannons. <b>The bounty you're chasing is your own pension. That's the trick.</b></p>
-    <p class="spirit">A top-down pirate action game in the spirit of
-      <a href="https://en.wikipedia.org/wiki/Overboard!_(1997_video_game)" target="_blank" rel="noopener">Overboard!</a>,
-      TimeSplitters and Banjo-Kazooie.</p>
-    <div class="cta-row">
-      <a class="btn gold dim" title="Coming soon">★ Wishlist (soon)</a>
-    </div>
+    <p class="hook">Captain Wilf Marlow is a day off retiring when the Cosmic Bank freezes his pension and hides it across eleven dimensions. He's fairly annoyed about it. He's getting it back with cannons.</p>
+    <p class="spirit">A top-down pirate game. If you loved
+      <a href="https://en.wikipedia.org/wiki/Overboard!_(1997_video_game)" target="_blank" rel="noopener">Overboard!</a>
+      on the PS1, or TimeSplitters, or Banjo-Kazooie, you'll feel at home.</p>
+    <div class="cta-row"><a class="btn gold dim" title="Coming soon">★ Wishlist (soon)</a></div>
   </div>
   <div class="scrolls">scroll to weigh anchor ⌄</div>
 </header>
 
-<section class="pitch panel-tint">
+<section class="prose tint">
   <div class="wrap">
     <div class="eyebrow">The job</div>
-    <h2 class="disp">A cosmic heist, one form at a time</h2>
-    <p class="lede">A top-down pirate action game — a spiritual successor to <em>Overboard! / Shipwreckers!</em> (PS1, 1997), built in Godot&nbsp;4.6.</p>
-    <p>Captain Wilf Marlow: forty-one years under the black flag, the last two stuck behind a desk as a "pirate-risk consultant." He's <em>one day from retirement</em> — and he knows it's a cursed thing to say in an action story. Everyone does. Nobody lets him live it down.</p>
-    <p>Eleven dimensional branch offices. Eleven surly regional managers with unreasonable KPIs. Eleven signed tokens to prise loose before the final boss — <em>HR</em> — countersigns the paperwork.</p>
+    <h2 class="disp">One last job. For his pension.</h2>
+    <p>Wilf has done forty-one years under the black flag. The last two were behind a desk as a "pirate-risk consultant", which he doesn't like to talk about. Then the bank froze his pension and stashed it across eleven dimensional branch offices, one signed token apiece, each guarded by a regional manager with targets to hit and no intention of countersigning anything.</p>
+    <p>So he's sailing through all eleven to collect. The final boss is HR. Obviously it is.</p>
+    <p>It's a spiritual successor to <em>Overboard! / Shipwreckers!</em> (PS1, 1997), built in Godot&nbsp;4.6, and it's a bit daft on purpose.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <div class="eyebrow">In motion</div>
-    <h2 class="disp">See it sail</h2>
-    <p class="lede">Raw early gameplay, no cuts — top-down sailing, staggered broadsides, and the living Caribbean bay.</p>
+    <h2 class="disp">Here it is, actually running</h2>
+    <p class="lede">Top-down sailing, real broadsides, a bay that's alive around you. No mock-ups, no cuts.</p>
     <div style="margin-top:24px; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 16px 44px #0008; line-height:0">
-      <video src="media/gameplay.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata"
-        style="width:100%; display:block; background:#06101a"></video>
+      <video src="media/gameplay.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="metadata" style="width:100%; display:block; background:#06101a"></video>
     </div>
   </div>
 </section>
 
-<section class="panel-tint">
+<section class="tint">
   <div class="wrap">
-    <div class="eyebrow">Cut from good cloth</div>
-    <h2 class="disp">Inspired by the greats</h2>
-    <p class="lede">A love letter to three very different classics — one for the sailing, one for the mad variety, one for the heart.</p>
+    <div class="eyebrow">Where it comes from</div>
+    <h2 class="disp">Standing on some good shoulders</h2>
+    <p class="lede">Three games I keep going back to. Bounty Overboard is trying to bottle a bit of each.</p>
     <div class="inspo">
       <a class="insp" href="https://en.wikipedia.org/wiki/Overboard!_(1997_video_game)" target="_blank" rel="noopener">
         <b>Overboard! / Shipwreckers!</b>
-        <span>The PS1 (1997) top-down pirate blueprint we're sailing straight after — the boat, the broadsides, the bird's-eye chaos.</span>
+        <span>The PS1 original from 1997. It nailed the top-down boat, the broadsides, and the bird's-eye scrap. This is me picking that torch back up.</span>
         <span class="go">Read about the original ↗</span>
       </a>
       <a class="insp" href="https://en.wikipedia.org/wiki/TimeSplitters" target="_blank" rel="noopener">
         <b>TimeSplitters</b>
-        <span>Its irreverent arcade spirit and gleeful dimension-to-dimension variety — every world a total change of costume.</span>
+        <span>For refusing to do the same thing twice. Every dimension here is a full change of scenery, enemies and toys.</span>
         <span class="go">Wikipedia ↗</span>
       </a>
       <a class="insp" href="https://en.wikipedia.org/wiki/Banjo-Kazooie" target="_blank" rel="noopener">
         <b>Banjo-Kazooie</b>
-        <span>Earnest weirdness, big daft characters, and jokes with genuine heart under the silliness.</span>
+        <span>For being silly and warm at the same time. Big characters, daft jokes, and a bit of heart underneath.</span>
         <span class="go">Wikipedia ↗</span>
       </a>
     </div>
@@ -199,57 +272,86 @@
 
 <section>
   <div class="wrap">
-    <div class="eyebrow">Eleven dimensions, one sea</div>
-    <h2 class="disp">Every branch office re-skins the whole ocean</h2>
-    <p class="lede">Water colour, sky, hazards, signature weapon, and a boss — each dimension is its own world. Four are playable today; here they are in full.</p>
+    <div class="eyebrow">Eleven dimensions</div>
+    <h2 class="disp">Every branch office is a different ocean</h2>
+    <p class="lede">New water, new sky, new hazards, a signature weapon and a boss. Four are playable already. Here's the full roster.</p>
     <div class="gal">
-      <div class="shot"><img src="img/biome_haunted.jpg" alt="Midnight Reef — haunted biome" loading="lazy"><div class="cap"><b>Midnight Reef</b></div></div>
-      <div class="shot"><img src="img/biome_arctic.jpg" alt="Frozen Assets — arctic biome" loading="lazy"><div class="cap"><b>Frozen Assets</b></div></div>
-      <div class="shot"><img src="img/biome_kraken.jpg" alt="KrakenCon — eldritch biome" loading="lazy"><div class="cap"><b>KrakenCon</b></div></div>
+      <div class="shot"><img src="img/biome_haunted.jpg" alt="Midnight Reef" loading="lazy"><div class="cap"><b>Midnight Reef</b></div></div>
+      <div class="shot"><img src="img/biome_arctic.jpg" alt="Frozen Assets" loading="lazy"><div class="cap"><b>Frozen Assets</b></div></div>
+      <div class="shot"><img src="img/biome_kraken.jpg" alt="KrakenCon" loading="lazy"><div class="cap"><b>KrakenCon</b></div></div>
     </div>
-
     <div class="biomes">
-      <article class="biome" style="--c:#2ec4c4"><span class="bn">01</span><h3>Caribbean</h3><p>Tutorial isles and corrupt harbourmasters in turquoise shallows.</p></article>
-      <article class="biome" style="--c:#4fe0a0"><span class="bn">02</span><h3>Midnight Reef</h3><p>A ghost fleet in spectral fog, over a bioluminescent deep.</p></article>
-      <article class="biome" style="--c:#8fd0ff"><span class="bn">03</span><h3>Frozen Assets</h3><p>Ice shelf, aurora, and the Rimefang spear forged in the cold.</p></article>
-      <article class="biome" style="--c:#b675e6"><span class="bn">04</span><h3>KrakenCon</h3><p>Cthulhu — who's fairly sure you're the pizza guy.</p></article>
-      <article class="biome" style="--c:#ef6b5c"><span class="bn">05</span><h3>Edo Japan</h3><p>Ryujin, the storm-bringing sea-dragon kami.</p></article>
-      <article class="biome" style="--c:#ff8a3c"><span class="bn">06</span><h3>Volcanic</h3><p>Magma shot, lava tides, and falling ash.</p></article>
-      <article class="biome" style="--c:#2fe3e3"><span class="bn">07</span><h3>Cyberpunk</h3><p>A neon flotilla and slick oil-fire traps.</p></article>
-      <article class="biome" style="--c:#46c793"><span class="bn">08</span><h3>Aztec</h3><p>Scarab swarms and poison darts among jade temples.</p></article>
-      <article class="biome" style="--c:#d0a53f"><span class="bn">09</span><h3>Prehistoric</h3><p>Primordial beasts in tar-black shallows.</p></article>
-      <article class="biome" style="--c:#e8c66a"><span class="bn">10</span><h3>Egyptian</h3><p>A sand-galley dynasty under a bronze sun.</p></article>
-      <article class="biome" style="--c:#8f7bff"><span class="bn">11</span><h3>Cosmic Void</h3><p class="final">Head Office. The Dimensionalist. Retirement.</p></article>
+      <article class="biome" style="--c:#2ec4c4"><div class="fx fx-carib"></div><span class="bn">01</span><h3>Caribbean</h3><p>Tutorial isles and bent harbourmasters, in the bluest water you've seen.</p></article>
+      <article class="biome" style="--c:#4fe0a0"><div class="fx fx-reef"></div><span class="bn">02</span><h3>Midnight Reef</h3><p>A ghost fleet in the fog, and something glowing in the deep.</p></article>
+      <article class="biome" style="--c:#8fd0ff"><div class="fx fx-frost"></div><span class="bn">03</span><h3>Frozen Assets</h3><p>Ice, aurora, and the Rimefang spear forged out here in the cold.</p></article>
+      <article class="biome" style="--c:#b675e6"><div class="fx fx-kraken"></div><span class="bn">04</span><h3>KrakenCon</h3><p>Cthulhu's here. He's pretty sure you're the pizza guy.</p></article>
+      <article class="biome" style="--c:#ef6b5c"><div class="fx fx-edo"></div><span class="bn">05</span><h3>Edo Japan</h3><p>Ryujin, the sea-dragon kami, and the storm he brings with him.</p></article>
+      <article class="biome" style="--c:#ff8a3c"><div class="fx fx-lava"></div><span class="bn">06</span><h3>Volcanic</h3><p>Magma shot, lava tides, and ash coming down like snow.</p></article>
+      <article class="biome" style="--c:#2fe3e3"><div class="fx fx-cyber"></div><span class="bn">07</span><h3>Cyberpunk</h3><p>A neon flotilla and oil slicks just begging for a spark.</p></article>
+      <article class="biome" style="--c:#46c793"><div class="fx fx-aztec"></div><span class="bn">08</span><h3>Aztec</h3><p>Scarab swarms and poison darts between the jade temples.</p></article>
+      <article class="biome" style="--c:#d0a53f"><div class="fx fx-prehist"></div><span class="bn">09</span><h3>Prehistoric</h3><p>Big old beasts in tar-black shallows. Mind the teeth.</p></article>
+      <article class="biome" style="--c:#e8c66a"><div class="fx fx-egypt"></div><span class="bn">10</span><h3>Egyptian</h3><p>A whole dynasty of sand-galleys under a bronze sun.</p></article>
+      <article class="biome" style="--c:#8f7bff"><div class="fx fx-cosmic"></div><span class="bn">11</span><h3>Cosmic Void</h3><p class="final">Head Office. The Dimensionalist. Retirement, if you live.</p></article>
     </div>
   </div>
 </section>
 
-<section class="panel-tint">
+<section class="tint">
   <div class="wrap">
-    <div class="eyebrow">Aboard the sloop</div>
-    <h2 class="disp">A ship, an arsenal, and a grudge</h2>
-    <div class="cols">
-      <div class="card">
-        <h3>The arsenal</h3>
-        <p>Staggered broadsides, chain shot, and a forward cannon — plus dingy-industrial, Tesla-style sidearms you bolt on as you go.</p>
-        <ul>
-          <li><b>Flamethrower</b> <span>— cone of fire, ignites oil slicks</span></li>
-          <li><b>Mines &amp; Fire Barrels</b> <span>— leave death in your wake</span></li>
-          <li><b>Tesla Coil</b> <span>— arc that chains between enemies</span></li>
-          <li><b>Rimefang</b> <span>— freeze on the first hit, shatter on the second</span></li>
-          <li><b>Kraken's Blessing</b> <span>— summon a god, briefly</span></li>
-        </ul>
-        <p style="margin-top:12px">…plus eleven dimension-locked artifacts. Take them off the manager.</p>
-      </div>
-      <div class="card">
-        <h3>The cast</h3>
-        <ul>
-          <li><b>Captain Wilf</b> <span>— gruff, genre-savvy, entirely self-interested. Just wants to hang up the flag.</span></li>
-          <li><b>Beakwell</b> <span>— a snarky seagull who does the emotional labour.</span></li>
-          <li><b>The Dimensionalist</b> <span>— CEO of the Cosmic Bank. Speaks only in corporate euphemism. "Let's loop back on that."</span></li>
-          <li><b>HR</b> <span>— the final boss. Of course it is.</span></li>
-        </ul>
-      </div>
+    <div class="eyebrow">The arsenal</div>
+    <h2 class="disp">Loads of toys. The fun is stacking them.</h2>
+    <p class="lede">Every weapon leaves a status on whatever it hits. Statuses stack, and that's where it gets silly. Line the right two up and you get something much nastier than either on its own.</p>
+
+    <h3 style="font-family:Pirata,serif; color:#fff; font-size:22px; margin-top:26px">The weapons</h3>
+    <div class="chips">
+      <span class="chip"><b>Broadsides</b> staggered port &amp; starboard</span>
+      <span class="chip"><b>Chain shot</b> slows what it hits</span>
+      <span class="chip"><b>Flamethrower</b> cone of fire</span>
+      <span class="chip"><b>Fire Barrels</b> burning wake</span>
+      <span class="chip"><b>Tesla Coil</b> arcs between ships</span>
+      <span class="chip"><b>Rimefang</b> freeze then shatter</span>
+      <span class="chip"><b>Magma Shot</b> leaves fire on impact</span>
+      <span class="chip"><b>EMP Pulse</b> stun + weak point</span>
+      <span class="chip"><b>Poison Darts</b> lingering DOT</span>
+      <span class="chip"><b>Scarab Swarm</b> seeks the nearest hull</span>
+      <span class="chip"><b>Boulder Catapult</b> lobbed arc</span>
+      <span class="chip"><b>Gravity Well</b> drags ships in</span>
+      <span class="chip"><b>Void Bolt</b> · <b>Soul Fire</b> · <b>Flame Arrows</b></span>
+      <span class="chip"><b>Kraken's Blessing</b> summon a god, briefly</span>
+    </div>
+
+    <h3 style="font-family:Pirata,serif; color:#fff; font-size:22px; margin-top:26px">The statuses that stack</h3>
+    <div class="statrow">
+      <span class="stat" style="--c:#ff7a2e">🔥 Burning</span>
+      <span class="stat" style="--c:#c9a24a">🛢️ Oiled</span>
+      <span class="stat" style="--c:#8fd0ff">❄️ Frozen</span>
+      <span class="stat" style="--c:#6fd0ff">⚡ Electrified</span>
+      <span class="stat" style="--c:#7fd06a">☠️ Poisoned</span>
+    </div>
+
+    <h3 style="font-family:Pirata,serif; color:#fff; font-size:22px; margin-top:28px">A few of the combos</h3>
+    <div class="combos">
+      <div class="combo"><div class="eq">Oiled + Fire = Inferno</div><p>Drench a fleet in oil, then swan past with the flamethrower. Burns twice as hard and jumps hull to hull.</p></div>
+      <div class="combo"><div class="eq">Frozen + Ram = Shatter</div><p>Freeze someone solid, then ram them. That's an instant kill, no follow-up needed.</p></div>
+      <div class="combo"><div class="eq">Oil slick + Tesla arc = free ignition</div><p>Park near an oiled ship with the coil live. The arc lights the oil for you. No fire weapon required.</p></div>
+      <div class="combo"><div class="eq">Oil + booster = burning wake</div><p>Gun the rocket booster through a slick and you leave a trail of fire behind the boat. Good for a chase.</p></div>
+      <div class="combo"><div class="eq">Rimefang, twice = guaranteed shatter</div><p>First spear freezes. Second spear shatters. A clean two-tap finisher.</p></div>
+      <div class="combo"><div class="eq">Electrified = it spreads</div><p>Shock one ship and the charge arcs to whoever's unlucky enough to be sailing next to it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The crew (and the suits)</div>
+    <h2 class="disp">Who you're dealing with</h2>
+    <div class="card">
+      <ul>
+        <li><b>Captain Wilf</b> — knackered, genre-savvy, only in it for himself. Just wants to hang up the flag.</li>
+        <li><b>Beakwell</b> — a seagull with a mouth on him, and the one doing the emotional labour.</li>
+        <li><b>The Dimensionalist</b> — CEO of the Cosmic Bank. Never raises his voice, only ever speaks in office-speak. "Let's take that offline."</li>
+        <li><b>HR</b> — the last boss. Course it is.</li>
+      </ul>
     </div>
   </div>
 </section>
@@ -257,20 +359,60 @@
 <section class="band">
   <div class="wrap">
     <span class="tag">IN DEVELOPMENT · GODOT 4.6</span>
-    <h2 class="disp" style="margin-top:16px">Weigh anchor</h2>
-    <p class="lede" style="margin:0 auto">Mid-production. Wishlisting and a devlog open soon — check back for the next port of call.</p>
-    <div class="cta-row">
-      <a class="btn gold dim" title="Coming soon">★ Wishlist on Steam (soon)</a>
-    </div>
+    <h2 class="disp" style="margin-top:16px">Not done yet</h2>
+    <p class="lede" style="margin:0 auto">Still mid-build. A wishlist link and a devlog are coming. For now, check back for the next port of call.</p>
+    <div class="cta-row"><a class="btn gold dim" title="Coming soon">★ Wishlist on Steam (soon)</a></div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div>© Bounty Overboard — <span class="gold disp" style="font-size:19px">the bounty is the pension</span></div>
-    <div class="made">A top-down pirate action game, built in Godot. Salmon ahoy. 🐟</div>
+    <div>© Bounty Overboard</div>
+    <div class="made">A top-down pirate game, made in Godot by Rob Farrow. Salmon ahoy. 🐟</div>
   </div>
 </footer>
+
+<script>
+(() => {
+  const cv = document.getElementById('waterfx'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W, H, DPR, cols, rows, stepX, stepY;
+  // soft light sprite (drawImage is far cheaper than per-cell gradients)
+  const dot = document.createElement('canvas'); dot.width = dot.height = 64;
+  const dg = dot.getContext('2d').createRadialGradient(32,32,0,32,32,32);
+  dg.addColorStop(0,'rgba(150,246,236,1)'); dg.addColorStop(1,'rgba(150,246,236,0)');
+  const dctx = dot.getContext('2d'); dctx.fillStyle = dg; dctx.fillRect(0,0,64,64);
+  function size(){
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = cv.width = innerWidth * DPR; H = cv.height = innerHeight * DPR;
+    cv.style.width = innerWidth+'px'; cv.style.height = innerHeight+'px';
+    const cell = 58 * DPR;
+    cols = Math.ceil(W/cell); rows = Math.ceil(H/cell); stepX = W/cols; stepY = H/rows;
+  }
+  size(); addEventListener('resize', size);
+  function draw(now){
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation = 'lighter';
+    const t = now * 0.00028;
+    for(let y=0; y<=rows; y++){
+      for(let x=0; x<=cols; x++){
+        const u = x/cols, v = y/rows;
+        let n = Math.sin(u*7 + t*3) + Math.sin(v*8 - t*2.2)
+              + Math.sin((u+v)*6 + t*2.6) + Math.sin((u-v)*9 - t*3.1);
+        n = (n + 4) / 8;                 // 0..1
+        const b = n*n*n*1.15;            // sharpen into caustic highlights
+        if(b > 0.10){
+          ctx.globalAlpha = Math.min(b*0.5, 0.6);
+          const s = (44 + 64*b) * DPR;
+          ctx.drawImage(dot, x*stepX - s/2, y*stepY - s/2, s, s);
+        }
+      }
+    }
+    if(!reduce) requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
 
 </body>
 </html>
